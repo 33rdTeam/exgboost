@@ -1,4 +1,4 @@
-FROM hexpm/elixir:1.20.2-erlang-29.0.2-debian-trixie-20260623-slim
+FROM hexpm/elixir:1.20.4-erlang-29.0.6-debian-trixie-20261005-slim
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV LANG=C.UTF-8
