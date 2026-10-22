@@ -12,3 +12,8 @@ erl_crash.dump
 .vscode/
 checksum.exs
 .DS_Store
+# Generated release outputs (included in Hex by the release workflow).
+checksum.exs
+/exgboost-*.tar
+**/__pycache__/
+release/
