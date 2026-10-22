@@ -7,39 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-- Align the MatchSense fork with acalejos/exgboost main, including its build and release versioning.
-- Retain the fork's Decimal 3.2.0 dependency update.
+### Added
 
-## 0.6.0 (2026-10-03)
+- Custom evaluation metrics and explicit `maximize` control for early stopping.
+- A bundled Vega schema for offline plotting compilation and regression tests.
+- A commit-by-commit review of the acalejos integration in `docs/upstream-review.md`.
 
-- Integrate contributor PRs #45 and #47, and the subsequent MatchSense fork
-  maintenance, preserving contributor commits and authorship.
-- Pin XGBoost 3.4.2 by full commit SHA. Remove the learner.cc `sed` patch;
-  discover the objective's default evaluation metric through upstream evaluation.
-- Fix early-stopping patience and retain the actual best score and iteration.
-  Add custom `feval` metrics and `maximize`, and parse dataset names with hyphens.
-- Use native runners for Linux Intel/ARM and macOS Intel/ARM. Reject cross-target
-  precompilation, inspect actual binary architectures, and smoke-test archives.
-- Bundle macOS OpenMP and native dependency licenses. Build complete release
-  checksums into Hex packages and stage draft GitHub releases after all jobs pass.
-- Publish the exact CI-built Hex package and docs when the GitHub draft release is published, with source/checksum verification and resumable uploads.
-- Test fresh Hex consumers on all four platforms with source compilation forbidden.
-- Add Elixir coverage reports, build caches, locked-dependency and formatting
-  checks, warnings-as-errors, and deterministic maintenance regression tests.
-- Preserve the deprecated file NIF wrapper using upstream's URI API, because
-  XGBoost removed `XGDMatrixCreateFromFile`.
-- Elixir 1.17 and OTP 26 are now the supported minimums. Models and weights use
-  portable JSON/UBJ; legacy snapshots remain readable. Internal raw-pointer NIF
-  helpers are removed. Kino rendering is provided by the example notebook instead
-  of requiring Kino in every application.
-- Make the large native plot-image converter an optional dependency; core training and Vega specifications do not require it.
-- Bundle the Vega schema for offline compilation and plot validation, with plotting regression tests.
-- Remove the obsolete compiled-model benchmark notebook from published docs.
+### Fixed
 
-## Contributor fork history
+- Early stopping patience, best-round retention, evaluation metric parsing, and custom metric direction. Custom metrics default to minimization even when their names resemble built-in maximizing metrics.
+- Label row-count validation and forwarding `disable_default_eval_metric` to XGBoost.
+- Native resource types are defined once, and the deprecated file wrapper uses the URI API.
+- Correct ignored Makefile build-type assignments so development and production builds select their intended configurations.
 
-The entries below were retained from the MatchSense fork integrated into this
-release. These version numbers describe that fork, not releases of acalejos/exgboost.
+### Compatibility
+
+- Retain this fork's `0.12.1` identity, unprefixed release tags, download URLs,
+  XGBoost 3.3.0, NIF ABI entries 2.17/2.18, build overrides, dependencies, and CI matrix.
+- Defer the upstream XGBoost 3.4.2 upgrade, distribution redesign, optional image
+  converter, coverage dependency changes, and automated Hex publication pipeline.
 
 ## 0.12.1
 

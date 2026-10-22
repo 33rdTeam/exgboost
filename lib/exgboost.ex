@@ -482,7 +482,7 @@ defmodule EXGBoost do
 
   ## Options
   * `:format` - the format to export the graphic as, must be either of: `:json`, `:html`, `:png`, `:svg`, `:pdf`. By default the format is inferred from the file extension.
-  * `:path` - the path to save the graphic to. File export requires the optional `:vega_lite_convert` dependency. If not provided, the graphic is returned as a VegaLite spec.
+  * `:path` - the path to save the graphic to. If not provided, the graphic is returned as a VegaLite spec.
   Other options are forwarded to `EXGBoost.Plotting.plot/2`. See `EXGBoost.Plotting` for more information.
   """
   @doc type: :plotting
@@ -492,12 +492,7 @@ defmodule EXGBoost do
     vega = Plotting.plot(booster, opts)
 
     if path != nil do
-      if not Code.ensure_loaded?(VegaLite.Convert) do
-        raise ArgumentError,
-              "Saving plot images requires the optional dependency {:vega_lite_convert, \"~> 1.0.1\"}; add it to your application's dependencies"
-      end
-
-      apply(VegaLite.Convert, :save!, [vega, path, save_opts])
+      VegaLite.Convert.save!(vega, path, save_opts)
     else
       vega
     end

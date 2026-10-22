@@ -140,11 +140,4 @@ defmodule EXGBoost.MaintenanceTest do
     assert {:ok, rows} = EXGBoost.NIF.dmatrix_num_row(ref)
     assert rows > 0
   end
-
-  test "precompiler rejects a target different from this host" do
-    {:ok, current} = EXGBoost.Precompiler.current_target()
-    other = EXGBoost.Precompiler.all_supported_targets(:fetch) |> Enum.find(&(&1 != current))
-    assert {:error, _} = EXGBoost.Precompiler.precompile([], other)
-    assert EXGBoost.Precompiler.all_supported_targets(:compile) == [current]
-  end
 end

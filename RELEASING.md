@@ -1,121 +1,63 @@
-# Releasing EXGBoost
+# Releasing this fork
 
-The native distribution uses XGBoost 3.4.2 at the immutable commit pinned in
-`Makefile`. Source builds do not patch upstream code. A NIF built on OTP 26
-(ABI 2.17) is reused on newer OTP releases. Each architecture builds on its own
-native runner; cross compilation is deliberately rejected.
-The bundled OpenMP library sets the macOS minimum to 14.0 on both architectures;
-archive validation rejects any dependency requiring a newer OS.
+This integration retains the release contract from `main` at `2bc87cb`:
 
-## Validate a change
+- Package: `exgboost`, currently version `0.12.1`, maintained by Ian Perks.
+- Source, homepage, and native download URLs: `https://github.com/iperks/exgboost`.
+- Tags are unprefixed versions such as `0.12.1`, not `v0.12.1`.
+- Bundled XGBoost: `v3.3.0`.
+- Fetchable NIF ABI entries: `2.17` and `2.18`.
+- Compiler and target selection: the existing `CCPrecompiler` configuration.
+- Linux release jobs: Ubuntu 24.04 and GCC/G++ 14, using the existing OTP/Elixir matrix.
+- macOS release job: the existing macOS 15 ARM runner with Homebrew OpenMP.
+
+The URL contract remains:
+
+```text
+https://github.com/iperks/exgboost/releases/download/<version>/<archive>
+exgboost-nif-<nif-abi>-<target>-<version>.tar.gz
+```
+
+The upstream history is recorded on `ip/sync-acalejos`, but its `0.6.0` identity,
+four-native-target/OTP-26-only distribution, macOS runtime bundling, and automated
+Hex publisher are intentionally deferred. See [the commit review](docs/upstream-review.md).
+
+## Validate the integration
 
 ```sh
-mix deps.get
+mix deps.get --check-locked
 EXGBOOST_BUILD=true mix quality
-EXGBOOST_BUILD=true MIX_ENV=test mix coveralls.html
+make check-xgboost-c-api
+EXGBOOST_BUILD=true mix run scripts/smoke.exs
 ```
 
-Coverage measures Elixir code; it does not measure C or upstream C++ coverage.
-The NIF stubs are excluded. CI retains JSON coverage reports as artifacts; no
-external coverage service or token is required. The initial coverage report is
-an honest baseline, with no artificial percentage gate.
+Use the same `XGBOOST_CACHE` override for every command when testing with an
+isolated cache. For production artifacts use `MIX_ENV=prod`. The Makefile retains
+its home-cache layout, Ninja generator, `CC`/`CXX`, `CMAKE_FLAGS`,
+`USE_LLVM_BREW`, and development/production build types. `BUILD_JOBS` bounds
+Ninja parallelism without changing artifact names or download selection.
 
-Pull requests also run the four-platform native packaging workflow. It tests
-source builds, creates and inspects archives, loads each archive in a fresh BEAM,
-and builds a Hex package containing all four checksums. Download the
-`hex-package` artifact to inspect the exact deliverable.
+The legacy NIF cache is shared across OTP toolchains. When switching OTP versions,
+force a NIF rebuild with the new ERTS headers or use a separate checkout/cache;
+do not assume a cached wrapper was compiled for the current runtime. This is an
+existing limitation, not a new cross-version compatibility guarantee.
 
-## One-time Hex setup
+## Prepare a release after review
 
-Create a publishing API key in your [Hex dashboard](https://hex.pm/dashboard/keys)
-with API write permission, then save it as the **`HEX_API_KEY`** repository secret
-in [GitHub Actions settings](https://github.com/acalejos/exgboost/settings/secrets/actions).
-This uses the API-key authentication described in [Hex's publishing guide](https://hex.pm/docs/publish#publishing-from-ci).
-The key is only supplied to the final upload step; PR builds and dry runs do not use it.
+1. Review the integration before changing `main`. Keep CUDA work on its separate
+   feature branch.
+2. Choose a new fork version for these unreleased changes. Update `@version`,
+   the changelog, and installation examples together. Do not republish `0.12.1`
+   with different code, checksums, or archives.
+3. Run CI on the retained OTP/Elixir matrix and test the actual deployment OS,
+   architecture, and runtime library requirements. A successful host build is not
+   proof that cross-compiled archives or macOS binaries work.
+4. Use the existing `.github/workflows/precompile.yml` and an unprefixed version
+   tag when the release is approved. Native archives remain in this fork's
+   GitHub release; there is no newly enabled Hex publication workflow.
+5. Generate and verify `checksum.exs` for the actual release archives before a
+   separate, approved Hex publication. Ignore any stale local checksum manifest
+   left by earlier CPU/CUDA experiments. Check that consumers fetch the matching
+   fork URL and archive rather than silently falling back to compilation.
 
-## Ship a release
-
-1. Set `@version` in `mix.exs`, update the README/notebook installation examples,
-   and date the corresponding changelog entry. Merge the change with green CI.
-2. From the matching clean `main` checkout, push the version tag. For 0.6.0:
-
-   ```sh
-   python3 scripts/check_release_tag.py v0.6.0
-   git tag v0.6.0
-   git push origin v0.6.0
-   ```
-
-   Actions builds and tests all four native archives, calculates `checksum.exs`,
-   embeds it in the Hex package, and builds the documentation using that same
-   native archive. Fresh consumers on all four platforms use the real downloader
-   and are forbidden from compiling XGBoost. Only after every check passes does
-   Actions create a **draft** GitHub release with the complete payloads.
-3. Inspect and publish that draft in GitHub, or run:
-
-   ```sh
-   gh release edit v0.6.0 --draft=false
-   ```
-
-   The **Publish Hex** workflow then verifies the published release against the
-   tagged checkout, tests an unauthenticated consumer download from the public
-   GitHub URL, and uploads the exact CI-built package and documentation to Hex.
-
-**No local native builds, checksum copying, or package rebuilding are required.**
-Publishing the GitHub release comes first, so the URLs embedded in Hex already
-exist. The naming contract is package `0.6.0`, Git tag `v0.6.0`, and native archive
-`exgboost-nif-2.17-<target>-0.6.0.tar.gz`. The version in `mix.exs` generates the
-GitHub download URL; CI rejects mismatched tags.
-
-## Inspect or retry publication
-
-Run the publication workflow manually against an already-published GitHub release.
-The default performs all validation and the public consumer test without uploading:
-
-```sh
-gh workflow run publish.yml --ref main -f tag=v0.6.0
-# Explicitly publish, or resume after a missing secret/docs upload failure:
-gh workflow run publish.yml --ref main -f tag=v0.6.0 -f publish=true
-```
-
-If the same package is already on Hex, the publisher compares its CDN tarball
-byte for byte, skips the package upload, and publishes the documentation. A
-different package at that version fails; it is never overwritten automatically.
-Missing or altered assets, incomplete manifests, wrong commits, and stale package
-contents also fail before upload. No failure path regenerates archives or changes
-checksums. Resolve the failure and rerun the workflow.
-
-The draft and CI artifacts contain the four native archives and SHA256 sidecars,
-`checksum.exs`, `exgboost-<version>.tar`, `exgboost-<version>-docs.tar.gz`,
-`release.json` (source commit and native hashes), and `SHA256SUMS` for every payload.
-Package publication uses [Hex's documented HTTP API](https://github.com/hexpm/specifications/blob/main/apiary.apib)
-to upload those existing tarballs, rather than rebuilding with `mix hex.publish`.
-For a local dry run, download the complete bundle into `release/` in its matching
-checkout and run `python3 scripts/publish_hex.py release`.
-
-## Reproduce a native package locally
-
-```sh
-MIX_ENV=prod mix deps.get
-EXGBOOST_BUILD=true MIX_ENV=prod ELIXIR_MAKE_CACHE_DIR="$PWD/cache/precompiled" \
-  mix elixir_make.precompile
-# Select the archive and the target printed by the precompiler:
-bash scripts/verify_archive.sh cache/precompiled/<archive>.tar.gz <target>
-MIX_ENV=prod bash scripts/smoke_archive.sh cache/precompiled/<archive>.tar.gz
-```
-
-Use OTP 26 to reproduce release ABI 2.17. A newer OTP emits a different archive
-ABI and is useful for testing, but the release manifest deliberately rejects it.
-Source builds support `BUILD_JOBS`, `USE_OPENMP`, `CMAKE_FLAGS`, `XGBOOST_CACHE`,
-and `XGBOOST_GIT_REV`. `EXGBOOST_BUILD=true` bypasses downloads. `make clean`
-removes installed native files while retaining the upstream build cache;
-`make distclean` also removes that cache. Use a separate cache when building
-with substantially different toolchains or experimental upstream revisions.
-
-## Update XGBoost
-
-Pin the release's full commit SHA in `Makefile` and update the version assertion
-in `scripts/smoke.exs`. Run the complete tests and native workflow, review
-`include/xgboost/c_api.h` and upstream release notes, and run
-`scripts/check_xgboost_c_api.sh <installed-include> <installed-library>`.
-Early stopping discovers the actual default metric through upstream evaluation;
-it does not depend on a patched `default_metric` JSON field.
+No release, tag, GitHub upload, or Hex publication is part of the integration review.

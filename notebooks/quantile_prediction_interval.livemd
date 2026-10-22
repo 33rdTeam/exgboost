@@ -2,7 +2,7 @@
 
 ```elixir
 Mix.install([
-  {:exgboost, "~> 0.6"},
+  {:exgboost, "~> 0.12"},
   {:explorer, "~> 0.7"},
   {:kino_explorer, "~> 0.1.8"},
   {:kino_vega_lite, "~> 0.1.8"},

@@ -23,7 +23,7 @@ billions of examples.
 ```elixir
 def deps do
 [
-  {:exgboost, "~> 0.6"}
+  {:exgboost, "~> 0.12"}
 ]
 end
 ```
@@ -166,10 +166,6 @@ by multiple tasks in calling applications.
   You can see available styles by running `EXGBoost.Plotting.get_styles()` or refer to the `EXGBoost.Plotting.Styles`
   documentation for a gallery of the styles.
 
-Saving plot images with `path:` requires adding `{:vega_lite_convert, "~> 1.0.1"}`
-to your application. Returning a Vega spec, training, and prediction do not need
-that additional native image-conversion runtime.
-
 ## Examples
 
   See the example Notebooks in the left sidebar (under the `Pages` tab) for more examples and tutorials
@@ -177,43 +173,37 @@ that additional native image-conversion runtime.
 
 ## Requirements
 
-### Precompiled distribution
+### Distribution and compatibility
 
-EXGBoost 0.6 targets XGBoost 3.4.2, Elixir 1.17+, and OTP 26+.
-Releases provide CPU archives for these native targets:
+This fork retains package version `0.12.1`, XGBoost `v3.3.0`, and Elixir `~> 1.17`.
+Native downloads use this fork's `iperks/exgboost` releases, unprefixed version
+tags (`0.12.1`), and the existing NIF ABI entries `2.17` and `2.18`.
 
-| Platform | Architectures | Build baseline |
-| --- | --- | --- |
-| Linux (glibc) | x86_64, aarch64 | Ubuntu 22.04 / glibc 2.35 |
-| macOS | x86_64, aarch64 | macOS 15 Intel / macOS 14 Apple Silicon |
-
-Mix downloads the matching archive and verifies its SHA256 checksum. The NIF,
-XGBoost, and dependency license notices are packaged together. macOS archives
-include the OpenMP runtime, so consumers do not need Homebrew. Linux consumers
-need the standard C++ and OpenMP runtimes (`libstdc++6` and `libgomp1` on Debian
-and Ubuntu). Windows, musl, and CUDA archives are not currently provided.
-Unsupported platforms fall back to a source build when the toolchain supports it.
-
-Both macOS archives require macOS 14.0 or newer because of the bundled OpenMP
-runtime. CI checks the minimum OS recorded in every packaged library.
+The release workflows retain Ubuntu 24.04 with GCC 14 and the existing macOS 15
+ARM runner. CI retains OTP 28.3 with Elixir 1.18.4/1.19.5 and OTP 29.0.2 with
+Elixir 1.20.2. These are build/test environments, not promises that every older
+OS or every cross-compilation target is supported. Upstream's four-native-target
+precompiler, OTP-26-only archive policy, and bundled macOS OpenMP distribution
+are deferred pending a separate compatibility review.
 
 ### Source builds and development
 
-Install Git, a C11/C++ compiler, Make, and CMake 3.18+. On macOS install the
+Install Git, a C/C++ compiler, Make, CMake, and Ninja. On macOS, install the
 Xcode command line tools and `brew install libomp` for source builds.
 
 ```sh
-mix deps.get
+mix deps.get --check-locked
 EXGBOOST_BUILD=true mix compile
 EXGBOOST_BUILD=true mix quality
-EXGBOOST_BUILD=true MIX_ENV=test mix coveralls.html
 ```
 
-Use `BUILD_JOBS=4` to adjust upstream build parallelism or `USE_OPENMP=OFF`
-to disable OpenMP. Builds retain an architecture-specific upstream cache under
-`cache/xgboost`; they neither move files out of that cache nor patch upstream
-source. See [RELEASING.md](RELEASING.md) for precompilation, artifact verification,
-checksums, and Hex publishing.
+`EXGBOOST_BUILD=true` forces source compilation. The existing `XGBOOST_CACHE`,
+`XGBOOST_GIT_REV`, `CMAKE_FLAGS`, `CC`/`CXX`, and `USE_LLVM_BREW` overrides are
+retained, as are release/debug build selection and the home-cache layout.
+`BUILD_JOBS` controls native build parallelism (default: 2). The plotting schema
+is bundled, so compiling the Elixir plotting module no longer makes an HTTP
+request. See [RELEASING.md](RELEASING.md) for this fork's release policy and
+[the upstream review](docs/upstream-review.md) for accepted and deferred changes.
 
 ## Known Limitations
 

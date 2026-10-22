@@ -1,52 +1,20 @@
-# Compile only on the current architecture. Fetch advertises every released target.
-# This prevents a native XGBoost build from being mislabeled as a cross-build.
-defmodule EXGBoost.Precompiler do
-  @targets ~w(x86_64-linux-gnu aarch64-linux-gnu x86_64-apple-darwin aarch64-apple-darwin)
-  def all_supported_targets(:fetch), do: @targets
-
-  def all_supported_targets(:compile) do
-    {:ok, target} = current_target()
-    if target in @targets, do: [target], else: []
-  end
-
-  def current_target, do: CCPrecompiler.current_target(:os.type())
-  def build_native(args), do: CCPrecompiler.build_native(args)
-
-  def precompile(args, target) do
-    case current_target() do
-      {:ok, ^target} -> CCPrecompiler.precompile(args, target)
-      _ -> {:error, "EXGBoost requires a native runner for #{target}"}
-    end
-  end
-end
-
 defmodule EXGBoost.MixProject do
   use Mix.Project
 
-  @version "0.6.0"
+  @version "0.12.1"
 
   def project do
     [
       app: :exgboost,
       version: @version,
-      make_precompiler: {:nif, EXGBoost.Precompiler},
+      make_precompiler: {:nif, CCPrecompiler},
       make_precompiler_url:
-        "https://github.com/acalejos/exgboost/releases/download/v#{@version}/@{artefact_filename}",
-      make_precompiler_priv_paths: ["libexgboost.*", "lib", "licenses"],
-      # OTP 26's NIF ABI loads on later OTP releases; build once per native target.
-      make_precompiler_nif_versions: [versions: ["2.17"]],
-      cc_precompiler: [
-        only_listed_targets: true,
-        compilers: %{
-          {:unix, :linux} => %{
-            "x86_64-linux-gnu" => {"cc", "g++"},
-            "aarch64-linux-gnu" => {"cc", "g++"}
-          },
-          {:unix, :darwin} => %{
-            "x86_64-apple-darwin" => {"cc", "c++"},
-            "aarch64-apple-darwin" => {"cc", "c++"}
-          }
-        }
+        "https://github.com/iperks/exgboost/releases/download/#{@version}/@{artefact_filename}",
+      make_precompiler_priv_paths: ["libexgboost.*", "lib"],
+      # NIF Versions correspond to OTP Releases
+      # https://github.com/erlang/otp/blob/d3aa6c044c3927f011fb76ac087d5ce0e814954c/erts/emulator/beam/erl_nif.h#L57
+      make_precompiler_nif_versions: [
+        versions: ["2.17", "2.18"]
       ],
       elixir: "~> 1.17",
       make_force_build: System.get_env("EXGBOOST_BUILD") == "true",
@@ -54,29 +22,19 @@ defmodule EXGBoost.MixProject do
       compilers: [:elixir_make] ++ Mix.compilers(),
       deps: deps(),
       name: "EXGBoost",
-      source_url: "https://github.com/acalejos/exgboost",
-      homepage_url: "https://github.com/acalejos/exgboost",
+      source_url: "https://github.com/iperks/exgboost",
+      homepage_url: "https://github.com/iperks/exgboost",
       docs: docs(),
-      package: package(),
-      test_coverage: [tool: ExCoveralls],
       aliases: [quality: ["format --check-formatted", "compile --warnings-as-errors", "test"]],
+      package: package(),
       description:
         "Elixir bindings for the XGBoost library. `EXGBoost` provides an implementation of XGBoost that works with
-      [Nx](https://hexdocs.pm/nx/Nx.html) tensors."
+      [Nx](https://hexdocs.pm/nx/Nx.html) tensors. Maintained fork of acalejos/exgboost."
     ]
   end
 
   def cli do
-    [
-      preferred_envs: [
-        docs: :docs,
-        "hex.publish": :docs,
-        quality: :test,
-        coveralls: :test,
-        "coveralls.html": :test,
-        "coveralls.json": :test
-      ]
-    ]
+    [preferred_envs: [docs: :docs, "hex.publish": :docs, quality: :test]]
   end
 
   def application do
@@ -88,35 +46,36 @@ defmodule EXGBoost.MixProject do
 
   defp deps do
     [
-      {:elixir_make, "~> 0.9", runtime: false},
-      {:castore, "~> 1.0", only: :test, runtime: false},
-      {:excoveralls, "~> 0.18", only: :test, runtime: false},
+      {:elixir_make, "~> 0.4", runtime: false},
       {:nimble_options, "~> 1.0"},
       {:nx, "~> 0.9"},
       {:jason, "~> 1.3"},
-      {:ex_doc, "~> 0.40", only: :docs, runtime: false},
-      {:cc_precompiler, "~> 0.1.11", runtime: false},
-      {:exterval, "~> 0.2.0"},
+      {:ex_doc, "~> 0.40", only: :docs},
+      {:cc_precompiler, "~> 0.1.0", runtime: false},
+      {:exterval, "0.2.0"},
       {:ex_json_schema, "~> 0.11.4"},
       {:vega_lite, "~> 0.1"},
-      {:vega_lite_convert, "~> 1.0.1", only: [:dev, :docs], optional: true},
+      {:vega_lite_convert, "~> 1.0.1"},
+      {:scidata, "~> 0.1", only: :dev},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false}
     ]
   end
 
   defp package do
     [
-      maintainers: ["Andres Alejos"],
+      maintainers: ["Ian Perks"],
       licenses: ["Apache-2.0"],
-      links: %{"GitHub" => "https://github.com/acalejos/exgboost"},
+      links: %{"GitHub" => "https://github.com/iperks/exgboost"},
       files: [
         "lib",
         "mix.exs",
         "c",
         "Makefile",
         "README.md",
+        "CONTRIBUTING.md",
         "CHANGELOG.md",
         "RELEASING.md",
+        "docs/upstream-review.md",
         "scripts/*.sh",
         "scripts/*.py",
         "scripts/*.exs",
@@ -130,11 +89,12 @@ defmodule EXGBoost.MixProject do
   defp docs do
     [
       main: "EXGBoost",
-      source_ref: "v#{@version}",
+      source_ref: @version,
       extras: [
         "RELEASING.md",
         "CONTRIBUTING.md",
         "CHANGELOG.md",
+        "docs/upstream-review.md",
         "notebooks/iris_classification.livemd",
         "notebooks/quantile_prediction_interval.livemd",
         "notebooks/plotting.livemd"
