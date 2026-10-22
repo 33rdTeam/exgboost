@@ -195,12 +195,13 @@ defmodule EXGBoost.Training do
 
         # Evaluation asks upstream to select and register the objective's default
         # metric. No patched config field or hard-coded objective mapping is needed.
-        results = Booster.eval_set(bst, evals_dmats, 0, feval: feval)
+        results = Booster.eval_set_with_source(bst, evals_dmats, 0, feval: feval)
 
-        metric_name =
-          case Enum.filter(results, fn {name, _, _} -> name == target_eval end) |> List.last() do
-            {_, name, _} ->
-              name
+        {metric_name, metric_source} =
+          case Enum.filter(results, fn {name, _, _, _} -> name == target_eval end)
+               |> List.last() do
+            {_, name, _, source} ->
+              {name, source}
 
             nil ->
               raise ArgumentError,
@@ -215,14 +216,7 @@ defmodule EXGBoost.Training do
             patience: early_stopping_rounds,
             best: nil,
             since_last_improvement: 0,
-            mode:
-              if(
-                maximize == true or
-                  (is_nil(maximize) and
-                     String.starts_with?(metric_name, ["auc", "ndcg", "map", "pre@"])),
-                do: :max,
-                else: :min
-              ),
+            mode: early_stopping_mode(maximize, metric_name, metric_source),
             target_eval: target_eval,
             target_metric: metric_name
           }
@@ -248,5 +242,13 @@ defmodule EXGBoost.Training do
       end
 
     default_callbacks
+  end
+
+  defp early_stopping_mode(true, _metric, _source), do: :max
+  defp early_stopping_mode(false, _metric, _source), do: :min
+  defp early_stopping_mode(nil, _metric, :custom), do: :min
+
+  defp early_stopping_mode(nil, metric, :builtin) do
+    if String.starts_with?(metric, ["auc", "ndcg", "map", "pre@"]), do: :max, else: :min
   end
 end

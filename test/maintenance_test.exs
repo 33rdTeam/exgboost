@@ -130,6 +130,110 @@ defmodule EXGBoost.MaintenanceTest do
     end
   end
 
+  for metric <- ["auc-loss", "map-error", "ndcg-loss", "pre@loss", "auc"] do
+    test "custom #{metric} defaults to minimization despite its name", %{x: x, y: y} do
+      metric = unquote(metric)
+
+      callback =
+        EXGBoost.Training.Callback.new(
+          :before_iteration,
+          fn state ->
+            Process.put(:decreasing_loss, 3.0 - state.iteration)
+            state
+          end,
+          :decreasing_loss
+        )
+
+      for override <- [[], [maximize: false], [maximize: true]] do
+        Process.put(:decreasing_loss, 3.0)
+
+        booster =
+          EXGBoost.train(
+            x,
+            y,
+            override ++
+              [
+                feval: fn _, _ -> {metric, Process.get(:decreasing_loss)} end,
+                callbacks: [callback],
+                disable_default_eval_metric: true,
+                early_stopping_rounds: 1,
+                num_boost_rounds: 4,
+                evals: [{x, y, "validation-set"}],
+                verbose_eval: false,
+                nthread: 1
+              ]
+          )
+
+        if override == [maximize: true] do
+          assert Booster.get_boosted_rounds(booster) == 2
+          assert booster.best_iteration == 1
+          assert booster.best_score == 3.0
+        else
+          assert Booster.get_boosted_rounds(booster) == 4
+          assert booster.best_iteration == 4
+          assert booster.best_score == 0.0
+        end
+      end
+    end
+  end
+
+  test "built-in AUC is maximized, including when a custom evaluator returns no metrics" do
+    x = Nx.tensor([[0.0], [1.0], [2.0], [3.0]])
+    y = Nx.tensor([0.0, 0.0, 1.0, 1.0])
+
+    # Reverse the validation labels after the first round so AUC falls from 1 to 0.
+    # This makes the chosen direction observable through the stopping round.
+    callback =
+      EXGBoost.Training.Callback.new(
+        :before_iteration,
+        fn state ->
+          if state.iteration > 0 do
+            for {dmat, _} <- state.meta_vars.eval_metrics.evals do
+              DMatrix.set_params(dmat, label: Nx.subtract(1.0, y))
+            end
+          end
+
+          state
+        end,
+        :reverse_validation_labels
+      )
+
+    for custom <- [[], [feval: fn _, _ -> [] end]],
+        override <- [[], [maximize: true], [maximize: false]] do
+      booster =
+        EXGBoost.train(
+          x,
+          y,
+          custom ++
+            override ++
+            [
+              callbacks: [callback],
+              objective: :binary_logistic,
+              eval_metric: :auc,
+              min_child_weight: 0,
+              lambda: 0,
+              max_depth: 1,
+              eta: 1.0,
+              early_stopping_rounds: 1,
+              num_boost_rounds: 4,
+              evals: [{x, y, "validation"}],
+              verbose_eval: false,
+              nthread: 1
+            ]
+        )
+
+      if override == [maximize: false] do
+        assert Booster.get_boosted_rounds(booster) == 3
+        assert booster.best_score == 0.0
+        assert booster.best_iteration == 2
+      else
+        assert Booster.get_boosted_rounds(booster) == 2
+        assert booster.best_score == 1.0
+        assert booster.best_iteration == 1
+      end
+    end
+  end
+
   test "deprecated file wrapper uses the supported upstream URI API" do
     assert {:ok, ref} =
              apply(EXGBoost.NIF, :dmatrix_create_from_file, [

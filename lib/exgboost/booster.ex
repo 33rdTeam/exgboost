@@ -558,9 +558,18 @@ defmodule EXGBoost.Booster do
   * `iteration` - Current iteration.
   * `feval` - Custom evaluation function.
 
-  Returns the resulting metrics as a list of 2-tuples in the form of {eval_metric, value}.
+  Returns metrics as `{dataset_name, metric_name, value}` tuples.
   """
   def eval_set(%__MODULE__{} = booster, evals, iteration, opts \\ []) when is_list(evals) do
+    for {dataset, metric, value, _source} <- eval_set_with_source(booster, evals, iteration, opts) do
+      {dataset, metric, value}
+    end
+  end
+
+  # Keep provenance internally so custom metric names cannot change the default
+  # early stopping direction. The public eval_set/4 return format stays unchanged.
+  @doc false
+  def eval_set_with_source(%__MODULE__{} = booster, evals, iteration, opts) when is_list(evals) do
     opts = Keyword.validate!(opts, feval: nil, output_margin: true)
     feval = opts[:feval]
     output_margin = opts[:output_margin]
@@ -589,7 +598,7 @@ defmodule EXGBoost.Booster do
           entry |> String.replace_prefix(name <> "-", "") |> String.split(":", parts: 2)
 
         case Float.parse(value) do
-          {number, ""} -> {name, metric, number}
+          {number, ""} -> {name, metric, number, :builtin}
           _ -> raise ArgumentError, "Non-finite or invalid evaluation metric: #{entry}"
         end
       end)
@@ -601,7 +610,7 @@ defmodule EXGBoost.Booster do
 
           feval.(predictions, dmat)
           |> List.wrap()
-          |> Enum.map(fn {name, value} -> {evname, name, value} end)
+          |> Enum.map(fn {name, value} -> {evname, name, value, :custom} end)
         end)
 
       res ++ custom_results
