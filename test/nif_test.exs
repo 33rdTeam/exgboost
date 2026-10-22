@@ -523,6 +523,8 @@ defmodule NifTest do
     assert EXGBoost.NIF.booster_save_model(booster, ubj_file) |> unwrap!() == :ok
     assert File.exists?(json_file) and File.regular?(json_file)
     assert File.exists?(ubj_file) and File.regular?(ubj_file)
+    # XGBoost's cache holds weak matrix references until the booster is configured.
+    assert EXGBoost.NIF.dmatrix_num_col(dmat) |> unwrap!() == 3
     assert File.rm(json_file) == :ok
     assert File.rm(ubj_file) == :ok
   end
@@ -547,6 +549,8 @@ defmodule NifTest do
     assert File.exists?(ubj_file) and File.regular?(ubj_file)
     assert EXGBoost.NIF.booster_load_model(json_file) |> unwrap!() != :error
     assert EXGBoost.NIF.booster_load_model(ubj_file) |> unwrap!() != :error
+    # Keep the raw cached matrix alive through the save/load sequence.
+    assert EXGBoost.NIF.dmatrix_num_col(dmat) |> unwrap!() == 3
   end
 
   test "booster serialize" do
