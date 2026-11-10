@@ -17,12 +17,16 @@ jobs:
       CC: gcc-14
       CXX: g++-14
     strategy:
+      fail-fast: false
       matrix:
         include:
-          - otp: "28.3"
+          - otp: "28.5"
             elixir: "1.18.4"
-          - otp: "29.0.2"
-            elixir: "1.20.2"
+          - otp: "28.5"
+            elixir: "1.19.7"
+          - otp: "29.1.2"
+            elixir: "1.20.5"
+
     steps:
       - uses: actions/checkout@v5
       - uses: erlef/setup-beam@v1
@@ -56,15 +60,15 @@ jobs:
 
   macos:
     runs-on: macos-15
-    name: Mac (ARM) Erlang/OTP 29.0.2 / Elixir 1.20.2
+    name: Mac (ARM) Erlang/OTP 29.1.2 / Elixir 1.20.5
     env:
       MIX_ENV: "prod"
     steps:
       - uses: actions/checkout@v5
       - uses: erlef/setup-beam@v1
         with:
-          otp-version: "29.0.2"
-          elixir-version: "1.20.2"
+          otp-version: "29.1.2"
+          elixir-version: "1.20.5"
       - name: Install libomp
         run: |
           brew install libomp
