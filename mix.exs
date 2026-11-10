@@ -9,7 +9,7 @@ defmodule EXGBoost.MixProject do
       version: @version,
       make_precompiler: {:nif, CCPrecompiler},
       make_precompiler_url:
-        "https://github.com/iperks/exgboost/releases/download/#{@version}/@{artefact_filename}",
+        "https://github.com/33rdTeam/exgboost/releases/download/#{@version}/@{artefact_filename}",
       make_precompiler_priv_paths: ["libexgboost.*", "lib"],
       # NIF Versions correspond to OTP Releases
       # https://github.com/erlang/otp/blob/d3aa6c044c3927f011fb76ac087d5ce0e814954c/erts/emulator/beam/erl_nif.h#L57
@@ -21,8 +21,8 @@ defmodule EXGBoost.MixProject do
       compilers: [:elixir_make] ++ Mix.compilers(),
       deps: deps(),
       name: "EXGBoost",
-      source_url: "https://github.com/iperks/exgboost",
-      homepage_url: "https://github.com/iperks/exgboost",
+      source_url: "https://github.com/33rdTeam/exgboost",
+      homepage_url: "https://github.com/33rdTeam/exgboost",
       docs: docs(),
       package: package(),
       before_closing_body_tag: &before_closing_body_tag/1,
@@ -65,7 +65,7 @@ defmodule EXGBoost.MixProject do
     [
       maintainers: ["Ian Perks"],
       licenses: ["Apache-2.0"],
-      links: %{"GitHub" => "https://github.com/iperks/exgboost"},
+      links: %{"GitHub" => "https://github.com/33rdTeam/exgboost"},
       files: [
         "lib",
         "mix.exs",
