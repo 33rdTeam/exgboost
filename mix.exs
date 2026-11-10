@@ -8,6 +8,7 @@ defmodule EXGBoost.MixProject do
       app: :exgboost,
       version: @version,
       make_precompiler: {:nif, CCPrecompiler},
+      make_precompiler_filename: "libexgboost",
       make_precompiler_url:
         "https://github.com/33rdTeam/exgboost/releases/download/#{@version}/@{artefact_filename}",
       make_precompiler_priv_paths: ["libexgboost.*", "lib"],
