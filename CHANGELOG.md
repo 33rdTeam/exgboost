@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.12.6
+
+### Added
+
+- Nothing.
+
+### Updated
+
+- Only run CI actions on pushed tags.
+- Fix macOS deprecation warnings on build.
+- Update erlang and elixir version on build images.
+
+### Removed
+
+- Nothing.
+
 ## 0.12.5
 
 ### Added
@@ -18,7 +34,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 
 - Nothing.
-
 
 ## 0.12.4
 
