@@ -58,66 +58,66 @@ else
 endif
 
 $(EXGBOOST_SO): $(EXGBOOST_CACHE_SO)
-    @mkdir -p $(EXGBOOST_LIB_DIR)
-    cp -a $(abspath $(EXGBOOST_CACHE_LIB_DIR))/. $(EXGBOOST_LIB_DIR)/ ; \
-    cp -a $(abspath $(EXGBOOST_CACHE_SO)) $(EXGBOOST_SO) ;
+	@mkdir -p $(EXGBOOST_LIB_DIR)
+	cp -a $(abspath $(EXGBOOST_CACHE_LIB_DIR))/. $(EXGBOOST_LIB_DIR)/ ; \
+	cp -a $(abspath $(EXGBOOST_CACHE_SO)) $(EXGBOOST_SO) ;
 
 $(EXGBOOST_CACHE_SO): $(XGBOOST_LIB_DIR_FLAG) $(C_SRCS)
-    @mkdir -p $(EXGBOOST_CACHE_LIB_DIR)
-    cp -a $(XGBOOST_LIB_DIR)/lib/. $(EXGBOOST_CACHE_LIB_DIR)
-    $(CC) $(CFLAGS) $(wildcard $(EXGBOOST_DIR)/src/*.c) $(LDFLAGS) -o $(EXGBOOST_CACHE_SO)
-    $(POST_INSTALL)
+	@mkdir -p $(EXGBOOST_CACHE_LIB_DIR)
+	cp -a $(XGBOOST_LIB_DIR)/lib/. $(EXGBOOST_CACHE_LIB_DIR)
+	$(CC) $(CFLAGS) $(wildcard $(EXGBOOST_DIR)/src/*.c) $(LDFLAGS) -o $(EXGBOOST_CACHE_SO)
+	$(POST_INSTALL)
 
 # This new target handles fetching the source code.
 # It only runs if the .git directory inside the source folder is missing.
 $(XGBOOST_DIR)/.git:
-    @mkdir -p $(XGBOOST_DIR) && \
-        cd $(XGBOOST_DIR) && \
-        git init && \
-        git remote add origin $(XGBOOST_GIT_REPO) && \
-        git fetch --depth 1 --recurse-submodules origin $(XGBOOST_GIT_REV) && \
-        git checkout FETCH_HEAD && \
-        git submodule update --init --recursive
+	@mkdir -p $(XGBOOST_DIR) && \
+		cd $(XGBOOST_DIR) && \
+		git init && \
+		git remote add origin $(XGBOOST_GIT_REPO) && \
+		git fetch --depth 1 --recurse-submodules origin $(XGBOOST_GIT_REV) && \
+		git checkout FETCH_HEAD && \
+		git submodule update --init --recursive
 
 # This modified target now depends on the fetch target.
 # It only contains the build commands.
 $(XGBOOST_LIB_DIR_FLAG): $(XGBOOST_DIR)/.git
-    cd $(XGBOOST_DIR) && \
-        cmake -B build -S . \
-            -DCMAKE_INSTALL_PREFIX=$(XGBOOST_LIB_DIR) \
-            -DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) \
-            -DCMAKE_C_COMPILER="$(CC)" \
-            -DCMAKE_CXX_COMPILER="$(CXX)" \
-            -GNinja $(CMAKE_FLAGS) && \
-        ninja -C build install
-    touch $(XGBOOST_LIB_DIR_FLAG)
+	cd $(XGBOOST_DIR) && \
+		cmake -B build -S . \
+			-DCMAKE_INSTALL_PREFIX=$(XGBOOST_LIB_DIR) \
+			-DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) \
+			-DCMAKE_C_COMPILER="$(CC)" \
+			-DCMAKE_CXX_COMPILER="$(CXX)" \
+			-GNinja $(CMAKE_FLAGS) && \
+		ninja -C build install
+	touch $(XGBOOST_LIB_DIR_FLAG)
 
 check-xgboost-c-api: $(XGBOOST_LIB_DIR_FLAG)
-    ./scripts/check_xgboost_c_api.sh \
-        "$(XGBOOST_LIB_DIR)/include" \
-        "$(XGBOOST_LIB_DIR)/lib/$(LIBXGBOOST)"
+	./scripts/check_xgboost_c_api.sh \
+		"$(XGBOOST_LIB_DIR)/include" \
+		"$(XGBOOST_LIB_DIR)/lib/$(LIBXGBOOST)"
 
 compare-xgboost-c-api:
-    @set -eu; \
-    for rev in "$(OLD_XGBOOST_GIT_REV)" "$(NEW_XGBOOST_GIT_REV)"; do \
-        dir="$(XGBOOST_CACHE)/xgboost-$$rev"; \
-        mkdir -p "$$dir"; \
-        if [ ! -d "$$dir/.git" ]; then \
-            git -C "$$dir" init; \
-            git -C "$$dir" remote add origin "$(XGBOOST_GIT_REPO)"; \
-        fi; \
-        git -C "$$dir" fetch --depth 1 --recurse-submodules origin "$$rev"; \
-        git -C "$$dir" checkout -f FETCH_HEAD; \
-        git -C "$$dir" submodule update --init --recursive; \
-    done; \
-    ./scripts/check_xgboost_c_api.sh --compare \
-        "$(XGBOOST_CACHE)/xgboost-$(OLD_XGBOOST_GIT_REV)/include" \
-        "$(XGBOOST_CACHE)/xgboost-$(NEW_XGBOOST_GIT_REV)/include"
+	@set -eu; \
+	for rev in "$(OLD_XGBOOST_GIT_REV)" "$(NEW_XGBOOST_GIT_REV)"; do \
+		dir="$(XGBOOST_CACHE)/xgboost-$$rev"; \
+		mkdir -p "$$dir"; \
+		if [ ! -d "$$dir/.git" ]; then \
+			git -C "$$dir" init; \
+			git -C "$$dir" remote add origin "$(XGBOOST_GIT_REPO)"; \
+		fi; \
+		git -C "$$dir" fetch --depth 1 --recurse-submodules origin "$$rev"; \
+		git -C "$$dir" checkout -f FETCH_HEAD; \
+		git -C "$$dir" submodule update --init --recursive; \
+	done; \
+	./scripts/check_xgboost_c_api.sh --compare \
+		"$(XGBOOST_CACHE)/xgboost-$(OLD_XGBOOST_GIT_REV)/include" \
+		"$(XGBOOST_CACHE)/xgboost-$(NEW_XGBOOST_GIT_REV)/include"
 
 clean:
-    rm -rf $(EXGBOOST_CACHE_SO)
-    rm -rf $(EXGBOOST_CACHE_LIB_DIR)
-    rm -rf $(EXGBOOST_SO)
-    rm -rf $(EXGBOOST_LIB_DIR)
-    rm -rf $(XGBOOST_DIR)
-    rm -rf $(XGBOOST_LIB_DIR_FLAG)
+	rm -rf $(EXGBOOST_CACHE_SO)
+	rm -rf $(EXGBOOST_CACHE_LIB_DIR)
+	rm -rf $(EXGBOOST_SO)
+	rm -rf $(EXGBOOST_LIB_DIR)
+	rm -rf $(XGBOOST_DIR)
+	rm -rf $(XGBOOST_LIB_DIR_FLAG)
