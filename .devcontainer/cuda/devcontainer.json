@@ -1,0 +1,44 @@
+{
+  "name": "EXGBoost Erlang 29 GCC 14 (CUDA)",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": "../.."
+  },
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached",
+  "workspaceFolder": "/workspace",
+  "containerEnv": {
+    "MIX_ENV": "dev",
+    "USE_CUDA": "ON",
+    "USE_NCCL": "OFF",
+    "NVIDIA_VISIBLE_DEVICES": "all",
+    "NVIDIA_DRIVER_CAPABILITIES": "compute,utility"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "jakebecker.elixir-ls",
+        "xaver.clang-format",
+        "openai.chatgpt"
+      ]
+    }
+  },
+  "postCreateCommand": "mix deps.get",
+  "remoteUser": "ubuntu",
+  "containerUser": "ubuntu",
+  "updateRemoteUserUID": true,
+  "features": {
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "configureZshAsDefaultShell": true
+    },
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
+      "moby": false
+    }
+  },
+  "runArgs": [
+    "--gpus=all",
+    "--dns=172.100.61.53",
+    "--network=network.ss"
+  ]
+}
