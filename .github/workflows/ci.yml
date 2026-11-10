@@ -18,12 +18,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - otp: "28.3"
+          - otp: "28.5"
             elixir: "1.18.4"
-          - otp: "28.3"
-            elixir: "1.19.5"
-          - otp: "29.0.2"
-            elixir: "1.20.2"
+          - otp: "28.5"
+            elixir: "1.19.7"
+          - otp: "29.1.2"
+            elixir: "1.20.5"
 
     steps:
       - uses: actions/checkout@v5
