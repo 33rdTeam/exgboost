@@ -32,6 +32,7 @@ defmodule EXGBoost.MixProject do
         end
       ],
       elixir: "~> 1.17",
+      elixirc_options: [no_warn_undefined: [EXGBoost.NIF]],
       start_permanent: Mix.env() == :prod,
       compilers: [:elixir_make] ++ Mix.compilers(),
       deps: deps(),
