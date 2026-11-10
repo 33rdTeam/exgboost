@@ -43,7 +43,10 @@ C_SRCS = $(wildcard $(EXGBOOST_DIR)/src/*.c) $(wildcard $(EXGBOOST_DIR)/include/
 LDFLAGS = -L$(EXGBOOST_CACHE_LIB_DIR) -lxgboost
 
 ifeq ($(shell uname -s), Darwin)
-    POST_INSTALL = install_name_tool $(EXGBOOST_CACHE_SO) -change @rpath/libxgboost.dylib @loader_path/lib/libxgboost.dylib
+    POST_INSTALL = \
+        install_name_tool -change @rpath/libxgboost.dylib @loader_path/lib/libxgboost.dylib $(EXGBOOST_CACHE_SO) || true; \
+        install_name_tool -change @rpath/libxgboost.3.dylib @loader_path/lib/libxgboost.3.dylib $(EXGBOOST_CACHE_SO) || true; \
+        install_name_tool -add_rpath @loader_path/lib $(EXGBOOST_CACHE_SO) || true
     LDFLAGS += -flat_namespace -undefined suppress
     LIBXGBOOST = libxgboost.dylib
     ifeq ($(USE_LLVM_BREW), true)
